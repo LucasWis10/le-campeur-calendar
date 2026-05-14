@@ -14,7 +14,7 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: "Missing required fields" })
     }
 
-    const fromEmail = d.fromEmail || "onboarding@resend.dev"
+    const fromEmail = d.fromEmail || "reservation@le-campeur.fr"
     const adminEmail = d.adminEmail
     if (!adminEmail) return res.status(400).json({ error: "Missing adminEmail" })
 
