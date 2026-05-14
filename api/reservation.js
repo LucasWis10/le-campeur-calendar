@@ -52,7 +52,9 @@ export default async function handler(req, res) {
         <tr><td style="padding:8px 12px;background:#f5f5f5;font-weight:bold">Km supplémentaires</td><td style="padding:8px 12px">${d.coutKm}€</td></tr>
         <tr><td style="padding:8px 12px;background:#f5f5f5;font-weight:bold">Options</td><td style="padding:8px 12px">${d.coutOptions}€</td></tr>
         <tr style="font-size:18px"><td style="padding:12px;background:#E85D3C;color:white;font-weight:bold">TOTAL ESTIMÉ</td><td style="padding:12px;background:#E85D3C;color:white;font-weight:bold">${d.total}€</td></tr>
-        <tr><td style="padding:8px 12px;background:#f5f5f5;font-weight:bold">Caution</td><td style="padding:8px 12px">${d.caution}€</td></tr>
+        <tr><td style="padding:8px 12px;background:#f5f5f5;font-weight:bold">Acompte (30%)</td><td style="padding:8px 12px">${d.acompte}€</td></tr>
+<tr><td style="padding:8px 12px;background:#f5f5f5;font-weight:bold">Annulation gratuite avant</td><td style="padding:8px 12px">${d.dateAnnulationFR}</td></tr>
+<tr><td style="padding:8px 12px;background:#f5f5f5;font-weight:bold">Caution</td><td style="padding:8px 12px">${d.caution}€</td></tr>
     </table>
 
     ${d.message ? `<h3 style="color:#E85D3C;margin-top:24px">💬 Message</h3><p style="background:#f9f9f9;padding:12px;border-radius:8px;line-height:1.6">${d.message}</p>` : ""}
@@ -75,7 +77,8 @@ export default async function handler(req, res) {
         <p style="margin:6px 0"><strong>🚐 Km estimés :</strong> ${d.kmPrevus} (${d.kmInclus} inclus)</p>
         ${d.options && d.options !== "Aucune" ? `<p style="margin:6px 0"><strong>✅ Options :</strong> ${d.options}</p>` : ""}
         <p style="margin:12px 0 6px;font-size:18px"><strong>💰 Total estimé : ${d.total}€</strong></p>
-        <p style="margin:6px 0;font-size:13px;opacity:0.7">Caution de ${d.caution}€ au départ (restituée au retour)</p>
+        <p style="margin:6px 0"><strong>📋 Acompte :</strong> ${d.acompte}€ (30% du total)</p>
+<p style="margin:6px 0;font-size:13px;color:#666">Annulation gratuite avec remboursement total de l'acompte avant le ${d.dateAnnulationFR}.</p><p style="margin:6px 0;font-size:13px;opacity:0.7">Caution de ${d.caution}€ au départ (restituée au retour)</p>
     </div>
 
     <div style="background:#FFF3E0;border-left:4px solid #E85D3C;padding:16px;border-radius:0 8px 8px 0;margin:20px 0">
