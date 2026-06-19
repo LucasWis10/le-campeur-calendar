@@ -33,8 +33,13 @@ export default async function handler(req, res) {
         const blocs = text.split("BEGIN:VEVENT").slice(1)
 
         blocs.forEach((bloc) => {
-            const dm = bloc.match(/DTSTART[^:]*:(\d{4})(\d{2})(\d{2})/)
-            const fm = bloc.match(/DTEND[^:]*:(\d{4})(\d{2})(\d{2})/)
+        const dm = bloc.match(
+            /DTSTART[^:]*:(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2}))?/
+        )
+        
+        const fm = bloc.match(
+            /DTEND[^:]*:(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2}))?/
+        )
             const summary = bloc.match(/SUMMARY:(.+)/)
 
             if (dm && fm) {
@@ -49,12 +54,24 @@ export default async function handler(req, res) {
         // Expand to individual blocked days
         const blockedDays = []
         events.forEach(({ start, end }) => {
-            const [sy, sm, sd] = start.split("-").map(Number)
-            const [ey, em, ed] = end.split("-").map(Number)
-            const d = new Date(sy, sm - 1, sd)
-            const f = new Date(ey, em - 1, ed)
-            f.setDate(f.getDate() - 1)
-            while (d <= f) {
+        const startDate = new Date(start)
+        const endDate = new Date(end)
+        
+        const d = new Date(startDate)
+        
+        // Si l'événement se termine après minuit,
+        // on bloque également le jour de fin.
+        const f = new Date(endDate)
+        
+        if (
+            endDate.getHours() > 0 ||
+            endDate.getMinutes() > 0 ||
+            endDate.getSeconds() > 0
+        ) {
+            f.setDate(f.getDate() + 1)
+        }
+        
+        while (d < f) {
                 const y = d.getFullYear()
                 const m = String(d.getMonth() + 1).padStart(2, "0")
                 const day = String(d.getDate()).padStart(2, "0")
