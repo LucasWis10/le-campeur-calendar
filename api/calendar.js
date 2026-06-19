@@ -53,7 +53,8 @@ export default async function handler(req, res) {
             const [ey, em, ed] = end.split("-").map(Number)
             const d = new Date(sy, sm - 1, sd)
             const f = new Date(ey, em - 1, ed)
-            while (d < f) {
+            f.setDate(f.getDate() - 1)
+            while (d <= f) {
                 const y = d.getFullYear()
                 const m = String(d.getMonth() + 1).padStart(2, "0")
                 const day = String(d.getDate()).padStart(2, "0")
