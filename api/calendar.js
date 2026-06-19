@@ -1,91 +1,81 @@
 export default async function handler(req, res) {
-// CORS
-res.setHeader("Access-Control-Allow-Origin", "*")
-res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS")
-res.setHeader("Access-Control-Allow-Headers", "Content-Type")
-res.setHeader("Cache-Control", "s-maxage=300, stale-while-revalidate=60")
+  res.setHeader("Access-Control-Allow-Origin", "*")
+  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS")
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type")
+  res.setHeader("Cache-Control", "s-maxage=300, stale-while-revalidate=60")
 
-```
-if (req.method === "OPTIONS") {
-    return res.status(200).end()
-}
+  if (req.method === "OPTIONS") return res.status(200).end()
 
-const calId = req.query.calId
+  const calId = req.query.calId
+  if (!calId) return res.status(400).json({ error: "Missing calId parameter" })
 
-if (!calId) {
-    return res.status(400).json({
-        error: "Missing calId parameter",
-    })
-}
+  const icalUrl = `https://calendar.google.com/calendar/ical/${encodeURIComponent(calId)}/public/basic.ics`
 
-const icalUrl = `https://calendar.google.com/calendar/ical/${encodeURIComponent(
-    calId
-)}/public/basic.ics`
-
-try {
+  try {
     const response = await fetch(icalUrl)
-
-    if (!response.ok) {
-        return res.status(response.status).json({
-            error: `Google returned ${response.status}`,
-        })
-    }
+    if (!response.ok) return res.status(response.status).json({ error: `Google returned ${response.status}` })
 
     const text = await response.text()
+    if (!text.includes("BEGIN:VCALENDAR")) return res.status(500).json({ error: "Invalid iCal format" })
 
-    if (!text.includes("BEGIN:VCALENDAR")) {
-        return res.status(500).json({
-            error: "Invalid iCal format",
-        })
-    }
-
-    const blockedDays = []
+    const events = []
     const blocs = text.split("BEGIN:VEVENT").slice(1)
 
     blocs.forEach((bloc) => {
-        const dm = bloc.match(
-            /DTSTART[^:]*:(\d{4})(\d{2})(\d{2})/
-        )
+      // Gère les deux formats : DATE (20250610) et DATETIME (20250610T143000Z)
+      const dm = bloc.match(/DTSTART[^:]*:(\d{4})(\d{2})(\d{2})/)
+      const fm = bloc.match(/DTEND[^:]*:(\d{4})(\d{2})(\d{2})/)
+      const isAllDay = bloc.match(/DTSTART;VALUE=DATE:/)
+      const summary = bloc.match(/SUMMARY:(.+)/)
 
-        const fm = bloc.match(
-            /DTEND[^:]*:(\d{4})(\d{2})(\d{2})/
-        )
+      if (dm) {
+        const start = `${dm[1]}-${dm[2]}-${dm[3]}`
 
-        if (!dm || !fm) return
-
-        const start = new Date(
-            Number(dm[1]),
-            Number(dm[2]) - 1,
-            Number(dm[3])
-        )
-
-        const end = new Date(
-            Number(fm[1]),
-            Number(fm[2]) - 1,
-            Number(fm[3])
-        )
-
-        while (start <= end) {
-            const y = start.getFullYear()
-            const m = String(start.getMonth() + 1).padStart(2, "0")
-            const d = String(start.getDate()).padStart(2, "0")
-
-            blockedDays.push(`${y}-${m}-${d}`)
-
-            start.setDate(start.getDate() + 1)
+        let end
+        if (fm) {
+          end = `${fm[1]}-${fm[2]}-${fm[3]}`
+          // Pour les événements all-day, iCal met DTEND = jour suivant → on recule d'un jour
+          if (isAllDay) {
+            const d = new Date(`${end}T00:00:00`)
+            d.setDate(d.getDate() - 1)
+            end = d.toISOString().slice(0, 10)
+          }
+        } else {
+          // Pas de DTEND → événement sur une seule journée
+          end = start
         }
+
+        events.push({
+          start,
+          end,
+          title: summary ? summary[1].trim() : "",
+        })
+      }
     })
+
+    // Expansion en jours individuels bloqués
+    const blockedDaysSet = new Set()
+
+    events.forEach(({ start, end }) => {
+      const d = new Date(`${start}T00:00:00`)
+      const last = new Date(`${end}T00:00:00`)
+
+      // Inclut start ET end
+      while (d <= last) {
+        blockedDaysSet.add(d.toISOString().slice(0, 10))
+        d.setDate(d.getDate() + 1)
+      }
+    })
+
+    const blockedDays = Array.from(blockedDaysSet).sort()
 
     return res.status(200).json({
-        ok: true,
-        blockedDays: [...new Set(blockedDays)].sort(),
-        count: [...new Set(blockedDays)].length,
+      ok: true,
+      events,
+      blockedDays,
+      count: events.length,
     })
-} catch (err) {
-    return res.status(500).json({
-        error: err.message || "Fetch failed",
-    })
-}
-```
-
+  } catch (err) {
+    return res.status(500).json({ error: err.message || "Fetch failed" })
+  }
 }
